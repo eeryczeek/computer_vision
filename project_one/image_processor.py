@@ -1,51 +1,40 @@
 import cv2
 import numpy as np
-from skimage import segmentation
 import matplotlib.pyplot as plt
 
 
+from sklearn.cluster import KMeans
+
+
 def remove_cars(image_paths):
-    # Load the images
     images = [cv2.imread(image_path) for image_path in image_paths]
 
-    # Convert images to RGB (OpenCV uses BGR by default)
-    images_rgb = [cv2.cvtColor(image, cv2.COLOR_BGR2RGB) for image in images]
+    mean_image = np.median(images, axis=0).astype(np.uint8)
+    mean_image_rgb = cv2.cvtColor(mean_image, cv2.COLOR_BGR2RGB)
 
-    # Combine the images into one numpy array
-    combined_image = np.stack(images_rgb, axis=0)
+    # Convert the mean image to the Lab color space
+    mean_image_lab = cv2.cvtColor(mean_image_rgb, cv2.COLOR_RGB2Lab)
 
-    # Convert the images to a 2D array
-    combined_image_2d = combined_image.reshape(-1, 3)
+    # Reshape the image to a 2D array of pixels
+    pixel_array = mean_image_lab.reshape((-1, 3))
 
-    # Use k-means clustering to segment the image into 2 clusters (background and cars)
-    kmeans = segmentation.slic(
-        combined_image, n_segments=2, compactness=10, sigma=1)
+    # Apply k-means clustering to group the pixels into clusters
+    kmeans = KMeans(n_init='auto').fit(pixel_array)
 
-    # Find the cluster with the cars
-    car_cluster = 1 if np.sum(kmeans == 0) > np.sum(kmeans == 1) else 0
+    # Identify the cluster that corresponds to the cars
+    car_cluster = np.argmin(kmeans.cluster_centers_.sum(axis=1))
 
-    # Create a mask for the cars
-    car_masks = [(kmeans[i] == car_cluster).reshape(image.shape[:2])
-                 for i, image in enumerate(images)]
+    # Create a mask that selects only the pixels in the car cluster
+    car_mask = (kmeans.labels_ == car_cluster).reshape(mean_image.shape[:2])
 
-    # Apply the mask to each image to remove the cars
-    road_images = [np.where(car_mask[:, :, np.newaxis], 255, image)
-                   for car_mask, image in zip(car_masks, images)]
+    # Apply the mask to the mean image to remove the cars
+    result_image = mean_image_rgb.copy()
+    result_image[car_mask] = [255, 255, 255]  # Replace car pixels with white
 
-    # Calculate the average image
-    average_image = np.mean(road_images, axis=0).astype(np.uint8)
-
-    # Display the average image
-    plt.figure()
-    plt.imshow(average_image)
-    plt.axis('off')
-    plt.title("Average Road Image")
-    plt.show()
-
-    return road_images
+    plt.imsave("result.jpg", result_image)
+    return None
 
 
-# Example usage
 image_paths = ["project_one/images/image1.jpg",
                "project_one/images/image2.jpg", "project_one/images/image3.jpg"]
 result_images = remove_cars(image_paths)
