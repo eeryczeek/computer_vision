@@ -7,7 +7,7 @@ from sklearn.cluster import KMeans
 
 
 def remove_cars(image_paths):
-    images = [cv2.imread(image_path) for image_path in image_paths]
+    images = np.array([cv2.imread(image_path) for image_path in image_paths])
 
     mean_image = np.median(images, axis=0).astype(np.uint8)
     mean_image_rgb = cv2.cvtColor(mean_image, cv2.COLOR_BGR2RGB)
@@ -34,7 +34,20 @@ def remove_cars(image_paths):
     plt.imsave("result.jpg", result_image)
     return None
 
+def remove_cars_with_segmenting(image_paths):
+    images = [cv2.imread(image_path) for image_path in image_paths]
 
-image_paths = ["project_one/images/image1.jpg",
-               "project_one/images/image2.jpg", "project_one/images/image3.jpg"]
+    print(images)
+    images_gray = [cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) for image in images]
+
+    gray = images_gray[0]
+    print(gray)
+    _,thresh = cv2.threshold(gray, np.mean(gray), 255, cv2.THRESH_BINARY_INV)
+
+    plt.axis('off')
+    plt.imshow(thresh)
+    return thresh
+
+image_paths = ["./images/image1.JPG",
+               "./images/image2.JPG", "./images/image3.JPG"]
 result_images = remove_cars(image_paths)
