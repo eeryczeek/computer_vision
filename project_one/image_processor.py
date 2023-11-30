@@ -1,53 +1,75 @@
 import cv2
+from matplotlib import pyplot as plt
 import numpy as np
-import matplotlib.pyplot as plt
+from skimage.morphology import binary_erosion, binary_opening
 
 
-from sklearn.cluster import KMeans
+image_paths = ["project_one/images/image1.JPG",
+               "project_one/images/image2.JPG", "project_one/images/image3.JPG"]
 
 
-def remove_cars(image_paths):
-    images = np.array([cv2.imread(image_path) for image_path in image_paths])
+def get_base_frame(images):
+    return np.median(images, axis=0).astype(np.uint8)
 
-    mean_image = np.median(images, axis=0).astype(np.uint8)
-    mean_image_rgb = cv2.cvtColor(mean_image, cv2.COLOR_BGR2RGB)
 
-    # Convert the mean image to the Lab color space
-    mean_image_lab = cv2.cvtColor(mean_image_rgb, cv2.COLOR_RGB2Lab)
+def load_images(image_paths):
+    """
+    Loads images from a list of paths.
 
-    # Reshape the image to a 2D array of pixels
-    pixel_array = mean_image_lab.reshape((-1, 3))
+    Args:
+        image_paths (list): A list of paths to images.
 
-    # Apply k-means clustering to group the pixels into clusters
-    kmeans = KMeans(n_init='auto').fit(pixel_array)
+    Returns:
+        list: A list of images.
+    """
+    return [cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB) for path in image_paths]
 
-    # Identify the cluster that corresponds to the cars
-    car_cluster = np.argmin(kmeans.cluster_centers_.sum(axis=1))
 
-    # Create a mask that selects only the pixels in the car cluster
-    car_mask = (kmeans.labels_ == car_cluster).reshape(mean_image.shape[:2])
+def detect_cars(images):
+    """
+    Detects cars in a set of images and returns the number of cars detected in each image.
 
-    # Apply the mask to the mean image to remove the cars
-    result_image = mean_image_rgb.copy()
-    result_image[car_mask] = [255, 255, 255]  # Replace car pixels with white
+    Args:
+        image_paths (list): A list of paths to images.
 
-    plt.imsave("result.jpg", result_image)
-    return None
+    Returns:
+        list: A list of positions of cars in each image.
+    """
+    base_frame = get_base_frame(images)
+    plt.imsave("baseframe.JPG", base_frame)
 
-def remove_cars_with_segmenting(image_paths):
-    images = [cv2.imread(image_path) for image_path in image_paths]
+    imamges_grey = [cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+                    for image in images]
 
-    print(images)
-    images_gray = [cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) for image in images]
+    differences = [np.where(cv2.absdiff(image1, image2) > 64, 1, 0) for i, image1 in enumerate(
+        imamges_grey) for j, image2 in enumerate(imamges_grey) if i != j and i < j]
 
-    gray = images_gray[0]
-    print(gray)
-    _,thresh = cv2.threshold(gray, np.mean(gray), 255, cv2.THRESH_BINARY_INV)
+    differences = [binary_opening(binary_erosion(binary_erosion(difference)))
+                   for difference in differences]
 
-    plt.axis('off')
-    plt.imshow(thresh)
-    return thresh
+    masks = [np.where(cv2.dilate(difference.astype(np.uint8), np.ones(
+        (69-32, 69-32), np.uint8), iterations=1) > 0, 1, 0) for difference in differences]
 
-image_paths = ["./images/image1.JPG",
-               "./images/image2.JPG", "./images/image3.JPG"]
-result_images = remove_cars(image_paths)
+    connected_components = [cv2.connectedComponentsWithStats(
+        mask.astype(np.uint8), 4) for mask in masks]
+
+    for i, connected_component in enumerate(connected_components):
+        num_labels, labels, stats, centroids = connected_component
+        for j, (stat, centroid) in enumerate(zip(stats[1:], centroids[1:])):
+            cars = [image[stat[1]:stat[1] +
+                          stat[3], stat[0]:stat[0]+stat[2]] for k, image in enumerate(images)]
+            cv2.imwrite(
+                f"cars/car_{i}_{j}_.JPG", cv2.cvtColor(np.concatenate(cars, axis=1), cv2.COLOR_BGR2RGB))
+
+            best_car = np.argmin(
+                [np.sum(image - np.full_like(image, fill_value=(120, 130, 130))) for image in cars], axis=0)
+            base_frame[stat[1]:stat[1] +
+                       stat[3], stat[0]:stat[0]+stat[2]] = cars[best_car]
+            print(f'car {i}_{j} stats: {stat}')
+
+    base_frame = cv2.GaussianBlur(base_frame, (421, 421), 0)
+    plt.imsave("no_cars.JPG", base_frame)
+
+
+if __name__ == "__main__":
+    detect_cars(load_images(image_paths))
