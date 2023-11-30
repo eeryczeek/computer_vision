@@ -24,7 +24,7 @@ The load_images function reads each image from the provided paths, converts them
 
 .|.|.
 :--:|:--:|:--:
-![image1](difference_0.JPG)|![image2](difference_1.JPG)|![image3](difference_2.JPG)
+![image1](differences_0.JPG)|![image2](differences_1.JPG)|![image3](differences_2.JPG)
 
 ```python
 def detect_cars(images):
@@ -43,7 +43,7 @@ The detect_cars function first converts each image to grayscale. It then calcula
 
 .|.|.
 :--:|:--:|:--:
-![image1](mask_0.JPG)|![image2](mask_1.JPG)|![image3](mask_2.JPG)
+![image1](masks_0.JPG)|![image2](masks_1.JPG)|![image3](masks_2.JPG)
 
 ```python
 def enhance_differences(differences):
@@ -54,9 +54,6 @@ The enhance_differences function dilates each difference image to enhance the di
 
 ### Step 4: Get Connected Components
 
-.|.|.
-:--:|:--:|:--:
-![image1](mask_0.JPG)|![image2](mask_1.JPG)|![image3](mask_2.JPG)
 
 ```python
 def get_connected_components(masks):
@@ -94,12 +91,13 @@ def remove_cars(images):
         for j, (stat, centroid) in enumerate(zip(stats[1:], centroids[1:])):
             left, top, width, height, area = stat
             cars = [image[top:top+height, left:left+width] for image in images]
-            base_frame[top:top+height, left:left+width] = cars[np.argmin([np.sum(image - np.full_like(image, fill_value=(120, 130, 130))) for image in cars], axis=0)]
-    plt.imsave("no_cars.JPG", base_frame)
+            save_images(np.concatenate(cars, axis=1), f"cars/car_{i}_{j}")
+            base_frame[top:top+height, left:left+width] = cars[np.argmin(
+                [np.sum(image - np.full_like(image, fill_value=(120, 130, 130))) for image in cars], axis=0)]
 ```
 The remove_cars function first gets the base frame by taking the median of the images. It then detects the cars, enhances the differences, and gets the connected components. For each connected component, it calculates the bounding box and extracts the corresponding region from each image. It then replaces the region in the base frame with the region from the image that has the minimum sum of differences from (120, 130, 130). Finally, it saves the base frame as no_cars.JPG.
 
 ## Results:
 
-![image1](no_cars.JPG)
+![image1](base_frame_without_cars.JPG)
 

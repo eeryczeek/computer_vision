@@ -1,4 +1,5 @@
 from skimage.morphology import binary_erosion, binary_opening
+from visualizer import plot_images_histograms, save_images
 import cv2
 from matplotlib import pyplot as plt
 import numpy as np
@@ -6,20 +7,6 @@ import numpy as np
 
 image_paths = ["images/image1.JPG",
                "images/image2.JPG", "images/image3.JPG"]
-
-
-def plot_images_histograms(images):
-    for i, image in enumerate(images):
-        plt.hist(image.ravel(), bins=256, color='orange', )
-        plt.hist(image[:, :, 0].ravel(), bins=256, color='red', alpha=0.5)
-        plt.hist(image[:, :, 1].ravel(), bins=256, color='Green', alpha=0.5)
-        plt.hist(image[:, :, 2].ravel(), bins=256, color='Blue', alpha=0.5)
-        plt.xlabel('Intensity Value')
-        plt.ylabel('Count')
-        plt.legend(
-            ['Total', 'Red_Channel', 'Green_Channel', 'Blue_Channel'])
-        plt.savefig(f"histogram_{i}.png")
-        plt.clf()
 
 
 def get_base_frame(images):
@@ -52,32 +39,25 @@ def get_connected_components(masks):
 
 
 def remove_cars(images):
-    plot_images_histograms(images)
-
     base_frame = get_base_frame(images)
-    plt.imsave("base_frame.JPG", base_frame)
-
     differences = detect_cars(images)
-    for i, difference in enumerate(differences):
-        plt.imsave(f"difference_{i}.JPG", difference)
-
     masks = enhance_differences(differences)
-    for i, mask in enumerate(masks):
-        plt.imsave(f"mask_{i}.JPG", mask)
-
     connected_components = get_connected_components(masks)
     for i, connected_component in enumerate(connected_components):
         num_labels, labels, stats, centroids = connected_component
         for j, (stat, centroid) in enumerate(zip(stats[1:], centroids[1:])):
             left, top, width, height, area = stat
             cars = [image[top:top+height, left:left+width] for image in images]
-            cv2.imwrite(
-                f"cars/car_{i}_{j}.JPG", cv2.cvtColor(np.concatenate(cars, axis=1), cv2.COLOR_BGR2RGB))
+            save_images(np.concatenate(cars, axis=1), f"cars/car_{i}_{j}")
 
             base_frame[top:top+height, left:left+width] = cars[np.argmin(
                 [np.sum(image - np.full_like(image, fill_value=(120, 130, 130))) for image in cars], axis=0)]
 
-    plt.imsave("no_cars.JPG", base_frame)
+    plot_images_histograms(images)
+    save_images(base_frame, "base_frame")
+    save_images(differences, "differences")
+    save_images(masks, "masks")
+    save_images(base_frame, "base_frame_without_cars")
 
 
 if __name__ == "__main__":
