@@ -42,6 +42,18 @@ def calculate_average_car_pixel_value(differences, images):
                   for diff, img in zip(differences, images)]
     return np.mean([np.mean(car, axis=(0, 1)) for car in car_pixels], axis=0) * 255
 
+def get_hard_regions_1(differences, images):
+    base_frame = get_base_frame(images)
+    mask = np.bitwise_or(*enhance_differences(differences))
+    expanded_mask = np.expand_dims(mask, axis=-1)
+    expanded_mask = np.repeat(expanded_mask, 3, axis=-1)
+    avg = calculate_average_car_pixel_value(differences, images)
+    base_without_road = base_frame - avg[None, None, ...]
+    masked_base_without_road = np.where(expanded_mask, base_without_road, 0)
+    clipped_masked = np.clip(masked_base_without_road/np.max(masked_base_without_road, axis=0), 0, 1)
+    save_images(clipped_masked, "hard_regions")
+    return clipped_masked
+
 
 def remove_cars(images):
     base_frame = get_base_frame(images)
@@ -76,4 +88,7 @@ def remove_cars(images):
 
 
 if __name__ == "__main__":
-    remove_cars(load_images(image_paths))
+    # remove_cars(load_images(image_paths))
+    imgs = load_images(image_paths)
+    diffs = detect_cars(imgs)
+    get_hard_regions_1(diffs, imgs)
