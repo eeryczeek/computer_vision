@@ -4,8 +4,7 @@ import cv2
 import numpy as np
 
 
-image_paths = ["images/image1.JPG",
-               "images/image2.JPG", "images/image3.JPG"]
+image_paths = ["images/image1.JPG", "images/image2.JPG", "images/image3.JPG"]
 
 
 def get_base_frame(images):
@@ -43,6 +42,11 @@ def calculate_average_car_pixel_value(differences, images):
     return np.mean([np.mean(car, axis=(0, 1)) for car in car_pixels], axis=0) * 255
 
 
+def get_difficult_areas(differences):
+    difficult_areas = np.sum(differences, axis=0) / len(differences)
+    return difficult_areas
+
+
 def remove_cars(images):
     base_frame = get_base_frame(images)
     base_frame_without_cars = base_frame.copy()
@@ -55,7 +59,7 @@ def remove_cars(images):
     connected_components = get_connected_components(masks)
 
     for i, connected_component in enumerate(connected_components):
-        num_labels, labels, stats, centroids = connected_component
+        _, _, stats, _ = connected_component
         for j, stat in enumerate(stats[1:]):
             left, top, width, height, area = stat
             cars = [image[top:top+height, left:left+width] for image in images]
@@ -64,13 +68,15 @@ def remove_cars(images):
             base_frame_without_cars[top:top+height, left:left+width] = cars[np.argmin(
                 [np.sum(image - np.full_like(image, fill_value=average_car_pixel_value)) for image in cars], axis=0)]
 
-    difficult_areas = enhance_differences([np.where(cv2.absdiff(cv2.cvtColor(
+    difficult_areas1 = enhance_differences([np.where(cv2.absdiff(cv2.cvtColor(
         base_frame, cv2.COLOR_RGB2GRAY), cv2.cvtColor(base_frame_without_cars, cv2.COLOR_RGB2GRAY)) > 64, 1, 0)])[0]
+    difficult_areas2 = get_difficult_areas(differences)
 
     save_images(base_frame, "results/base_frame")
     plot_images_histograms(images, "results/histograms")
     save_images(differences, "results/differences")
-    save_images(difficult_areas, 'results/difficult_areas')
+    save_images(difficult_areas1, 'results/difficult_areas1')
+    save_images(difficult_areas2, 'results/difficult_areas2')
     save_images(masks, "results/masks")
     save_images(base_frame_without_cars, "results/base_frame_without_cars")
 
