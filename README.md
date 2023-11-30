@@ -64,7 +64,10 @@ The get_connected_components function finds all connected components (groups of 
 ### tep 4.5: Extract Cars and Replace in Base Frame:
 |.|
 |:--:|
-|![image1](cars/car_2_6.JPG)|
+|![image1](cars/car_2_2.JPG)|
+|![image2](cars/car_0_1.JPG)|
+|![image3](cars/car_2_6.JPG)|
+
 
 ```python
 cars = [image[top:top+height, left:left+width] for image in images]
