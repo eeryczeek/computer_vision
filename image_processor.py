@@ -1,11 +1,25 @@
+from skimage.morphology import binary_erosion, binary_opening
 import cv2
 from matplotlib import pyplot as plt
 import numpy as np
-from skimage.morphology import binary_erosion, binary_opening
 
 
 image_paths = ["images/image1.JPG",
                "images/image2.JPG", "images/image3.JPG"]
+
+
+def plot_images_histograms(images):
+    for i, image in enumerate(images):
+        plt.hist(image.ravel(), bins=256, color='orange', )
+        plt.hist(image[:, :, 0].ravel(), bins=256, color='red', alpha=0.5)
+        plt.hist(image[:, :, 1].ravel(), bins=256, color='Green', alpha=0.5)
+        plt.hist(image[:, :, 2].ravel(), bins=256, color='Blue', alpha=0.5)
+        plt.xlabel('Intensity Value')
+        plt.ylabel('Count')
+        plt.legend(
+            ['Total', 'Red_Channel', 'Green_Channel', 'Blue_Channel'])
+        plt.savefig(f"histogram_{i}.png")
+        plt.clf()
 
 
 def get_base_frame(images):
@@ -38,6 +52,8 @@ def get_connected_components(masks):
 
 
 def remove_cars(images):
+    plot_images_histograms(images)
+
     base_frame = get_base_frame(images)
     plt.imsave("base_frame.JPG", base_frame)
 

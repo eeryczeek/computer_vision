@@ -10,12 +10,15 @@ This report describes the steps performed in the image_processor.py script for d
 .|.|.
 :--:|:--:|:--:
 ![image1](images/image1.JPG)|![image2](images/image2.JPG)|![image3](images/image3.JPG)
+![image4](histogram_0.PNG)|![image5](histogram_1.PNG)|![image6](histogram_2.PNG)
 
 ```python
 def load_images(image_paths):
     return [cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB) for path in image_paths]
 ```
-The load_images function reads each image from the provided paths, converts them from BGR to RGB color space (since OpenCV reads images in BGR format by default), and returns a list of images.
+The load_images function reads each image from the provided paths, converts them from BGR to RGB color space (since OpenCV reads images in BGR format by default), and returns a list of images. Below is the base_frame image `(np.median([image1, image2, image3]))` we will use to paint over.
+
+![base_frame](base_frame.JPG)
 
 ### Step 2: Detect Cars
 
