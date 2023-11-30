@@ -36,12 +36,19 @@ def detect_cars(images):
                     for image in images]
 
     differences = [np.where(cv2.absdiff(image1, image2) > 64, 1, 0) for i, image1 in enumerate(
-        imamges_grey) for j, image2 in enumerate(imamges_grey) if i != j and i < j]
+        imamges_grey) for j, image2 in enumerate(imamges_grey) if i < j]
 
     return [binary_opening(binary_erosion(binary_erosion(difference)))
             for difference in differences]
 ```
-The detect_cars function first converts each image to grayscale. It then calculates the absolute difference between each pair of images, and applies a threshold to create a binary image where the differences are marked as 1 and the rest as 0. This binary image is then eroded twice and opened once to remove noise and separate the cars from each other.
+The detect_cars function first converts each image to grayscale. It then calculates the absolute difference between each pair of images, and applies a threshold to create a binary image where the differences are marked as 1 and the rest as 0. This binary image is then eroded twice and opened once to remove noise and separate the cars from each other. Just after that we calculate the mean car pixel value to later determine wheteher there is a car on our image segment or not.
+
+```python
+def calculate_average_car_pixel_value(differences, images):
+    car_pixels = [np.where(diff[..., None], img, 0)
+                  for diff, img in zip(differences, images)]
+    return np.mean([np.mean(car, axis=(0, 1)) for car in car_pixels], axis=0) * 255
+```
 
 ### Step 3: Enhance Differences
 
@@ -87,17 +94,19 @@ Finally, we replace the region in the base frame with the found image. This effe
 ```python
 def remove_cars(images):
     base_frame = get_base_frame(images)
+    base_frame_without_cars = base_frame.copy()
     differences = detect_cars(images)
+    average_car_pixel_value = calculate_average_car_pixel_value(differences, images)
     masks = enhance_differences(differences)
     connected_components = get_connected_components(masks)
     for i, connected_component in enumerate(connected_components):
         num_labels, labels, stats, centroids = connected_component
-        for j, (stat, centroid) in enumerate(zip(stats[1:], centroids[1:])):
+        for j, stat in enumerate(stats[1:]):
             left, top, width, height, area = stat
             cars = [image[top:top+height, left:left+width] for image in images]
             save_images(np.concatenate(cars, axis=1), f"cars/car_{i}_{j}")
-            base_frame[top:top+height, left:left+width] = cars[np.argmin(
-                [np.sum(image - np.full_like(image, fill_value=(120, 130, 130))) for image in cars], axis=0)]
+            base_frame_without_cars[top:top+height, left:left+width] = cars[np.argmin(
+                [np.sum(image - np.full_like(image, fill_value=average_car_pixel_value)) for image in cars], axis=0)]
 ```
 The remove_cars function first gets the base frame by taking the median of the images. It then detects the cars, enhances the differences, and gets the connected components. For each connected component, it calculates the bounding box and extracts the corresponding region from each image. It then replaces the region in the base frame with the region from the image that has the minimum sum of differences from (120, 130, 130). Finally, it saves the base frame as no_cars.JPG.
 
