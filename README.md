@@ -10,7 +10,7 @@ This report describes the steps performed in the image_processor.py script for d
 .|.|.
 :--:|:--:|:--:
 ![image1](images/image1.JPG)|![image2](images/image2.JPG)|![image3](images/image3.JPG)
-![image4](histogram_0.PNG)|![image5](histogram_1.PNG)|![image6](histogram_2.PNG)
+![image4](results/histograms_0.JPG)|![image5](results/histograms_1.JPG)|![image6](results/histograms_2.JPG)
 
 ```python
 def load_images(image_paths):
@@ -18,17 +18,17 @@ def load_images(image_paths):
 ```
 The load_images function reads each image from the provided paths, converts them from BGR to RGB color space (since OpenCV reads images in BGR format by default), and returns a list of images. Below is the base_frame image `(np.median([image1, image2, image3]))` we will use to paint over.
 
-![base_frame](base_frame.JPG)
+![base_frame](results/base_frame.JPG)
 
 Difficult areas in our image:
 
-![difficult_areas](difficult_areas.JPG)
+![difficult_areas](results/difficult_areas.JPG)
 
 ### Step 2: Detect Cars
 
 .|.|.
 :--:|:--:|:--:
-![image1](differences_0.JPG)|![image2](differences_1.JPG)|![image3](differences_2.JPG)
+![image1](results/differences_0.JPG)|![image2](results/differences_1.JPG)|![image3](results/differences_2.JPG)
 
 ```python
 def detect_cars(images):
@@ -47,12 +47,12 @@ The detect_cars function first converts each image to grayscale. It then calcula
 
 .|.|.
 :--:|:--:|:--:
-![image1](masks_0.JPG)|![image2](masks_1.JPG)|![image3](masks_2.JPG)
+![image1](results/masks_0.JPG)|![image2](results/masks_1.JPG)|![image3](results/masks_2.JPG)
 
 ```python
 def enhance_differences(differences):
     return [np.where(cv2.dilate(difference.astype(np.uint8), np.ones(
-        (69-32, 69-32), np.uint8), iterations=1) > 0, 1, 0) for difference in differences]
+        (37, 37), np.uint8), iterations=1) > 0, 1, 0) for difference in differences]
 ```
 The enhance_differences function dilates each difference image to enhance the differences and make the cars more visible. It then applies a threshold to create a binary image where the differences are marked as 1 and the rest as 0.
 
@@ -103,5 +103,5 @@ The remove_cars function first gets the base frame by taking the median of the i
 
 ## Results:
 
-![image1](base_frame_without_cars.JPG)
+![image1](results/base_frame_without_cars.JPG)
 

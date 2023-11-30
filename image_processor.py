@@ -1,4 +1,4 @@
-from skimage.morphology import binary_erosion, binary_opening
+from skimage.morphology import binary_erosion, binary_opening, remove_small_holes, remove_small_objects
 from visualizer import plot_images_histograms, save_images
 import cv2
 import numpy as np
@@ -37,6 +37,15 @@ def get_connected_components(masks):
         mask.astype(np.uint8), 4) for mask in masks]
 
 
+def calculate_average_car_pixel_value(differences, images):
+    car_pixels = []
+    for difference, image in zip(differences, images):
+        car_pixels.append(np.where(difference[..., None], image, 0))
+    average_car_pixel_value = np.mean(
+        [np.mean(car, axis=(0, 1)) for car in car_pixels], axis=0) * 255
+    return average_car_pixel_value
+
+
 def remove_cars(images):
     base_frame = get_base_frame(images)
     base_frame_without_cars = base_frame.copy()
@@ -44,6 +53,9 @@ def remove_cars(images):
     differences = detect_cars(images)
     masks = enhance_differences(differences)
     connected_components = get_connected_components(masks)
+    average_car_pixel_value = calculate_average_car_pixel_value(
+        differences, images)
+
     for i, connected_component in enumerate(connected_components):
         num_labels, labels, stats, centroids = connected_component
         for j, (stat, centroid) in enumerate(zip(stats[1:], centroids[1:])):
@@ -52,17 +64,17 @@ def remove_cars(images):
             save_images(np.concatenate(cars, axis=1), f"cars/car_{i}_{j}")
 
             base_frame_without_cars[top:top+height, left:left+width] = cars[np.argmin(
-                [np.sum(image - np.full_like(image, fill_value=(120, 130, 130))) for image in cars], axis=0)]
+                [np.sum(image - np.full_like(image, fill_value=average_car_pixel_value)) for image in cars], axis=0)]
 
     difficult_areas = enhance_differences([np.where(cv2.absdiff(cv2.cvtColor(
         base_frame, cv2.COLOR_RGB2GRAY), cv2.cvtColor(base_frame_without_cars, cv2.COLOR_RGB2GRAY)) > 64, 1, 0)])[0]
 
-    save_images(base_frame, "base_frame")
-    plot_images_histograms(images)
-    save_images(differences, "differences")
-    save_images(difficult_areas, 'difficult_areas')
-    save_images(masks, "masks")
-    save_images(base_frame_without_cars, "base_frame_without_cars")
+    save_images(base_frame, "results/base_frame")
+    plot_images_histograms(images, "results/histograms")
+    save_images(differences, "results/differences")
+    save_images(difficult_areas, 'results/difficult_areas')
+    save_images(masks, "results/masks")
+    save_images(base_frame_without_cars, "results/base_frame_without_cars")
 
 
 if __name__ == "__main__":
