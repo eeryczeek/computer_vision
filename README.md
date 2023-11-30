@@ -20,6 +20,10 @@ The load_images function reads each image from the provided paths, converts them
 
 ![base_frame](base_frame.JPG)
 
+Difficult areas in our image:
+
+![difficult_areas](difficult_areas.JPG)
+
 ### Step 2: Detect Cars
 
 .|.|.
